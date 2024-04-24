@@ -1,5 +1,7 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+from read_file_line_split import *
+
 
 def load_motion_data(bvh_file_path):
     """part2 辅助函数，读取bvh文件"""
@@ -9,14 +11,13 @@ def load_motion_data(bvh_file_path):
             if lines[i].startswith('Frame Time'):
                 break
         motion_data = []
-        for line in lines[i+1:]:
+        for line in lines[i + 1:]:
             data = [float(x) for x in line.split()]
             if len(data) == 0:
                 break
-            motion_data.append(np.array(data).reshape(1,-1))
+            motion_data.append(np.array(data).reshape(1, -1))
         motion_data = np.concatenate(motion_data, axis=0)
     return motion_data
-
 
 
 def part1_calculate_T_pose(bvh_file_path):
@@ -30,10 +31,80 @@ def part1_calculate_T_pose(bvh_file_path):
     Tips:
         joint_name顺序应该和bvh一致
     """
-    joint_name = None
-    joint_parent = None
-    joint_offset = None
-    return joint_name, joint_parent, joint_offset
+
+    stack = []
+
+    joint_name = []
+    joint_parent = []
+    joint_offset = []
+
+    with open(bvh_file_path, 'r') as f:
+        lines = f.readlines()
+        file_size = len(lines)
+        i = 0
+        while i < file_size:
+            line = lines[i]
+            i += 1
+
+            line = file_line_split(line)
+
+            if len(line) == 0:
+                continue
+            elif line[0].upper() == 'HIERARCHY':
+                continue
+            elif line[0].upper() == 'ROOT' or line[0].upper() == 'JOINT' or line[0].upper() == 'END':
+                bRoot = line[0].upper() == 'ROOT'
+                bEnd = line[0].upper() == 'END'
+
+                father_index = -1
+                if len(stack) > 0:
+                    father_index = stack[-1]
+
+                single_joint_name = line[1]
+                single_joint_name = 'RootJoint' if bRoot else single_joint_name
+                single_joint_name = (joint_name[father_index] + '_end') if bEnd else single_joint_name
+
+                joint_name.append(single_joint_name)
+                joint_parent.append(father_index)
+
+                # read offset
+                while i < file_size:
+                    line = lines[i]
+                    i += 1
+                    line = file_line_split(line)
+                    if len(line) == 0:
+                        continue
+                    elif line[0] == '{':
+                        stack.append(len(joint_name) - 1)
+                    elif line[0].upper() == 'OFFSET':
+                        offset = line[1:]
+                        for j in range(len(offset)):
+                            offset[j] = float(offset[j])
+                        joint_offset.append(offset)
+                    elif line[0].upper() == 'CHANNELS':
+                        break
+                    elif line[0] == '}':
+                        stack.pop()
+                        break
+                    else:
+                        continue
+
+            elif line[0] == '}':
+                stack.pop()
+
+            # Motion Data
+            elif lines[i].startswith('Frame Time'):
+                break
+            else:
+                continue
+    assert(len(joint_name) == len(joint_offset))
+    assert(len(joint_name) == len(joint_parent))
+    # joint_name = []
+    # joint_parent = []
+    # joint_offset = []
+    joint_offset_ndarray = np.asarray(joint_offset)
+
+    return joint_name, joint_parent, joint_offset_ndarray
 
 
 def part2_forward_kinematics(joint_name, joint_parent, joint_offset, motion_data, frame_id):

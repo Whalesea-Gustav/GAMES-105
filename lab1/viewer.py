@@ -4,6 +4,7 @@ from panda3d.core import ClockObject
 import panda3d.core as pc
 import math
 from direct.showbase.DirectObject import DirectObject
+from direct.showbase.ShowBaseGlobal import globalClock
 from direct.gui.DirectGui import *
 
 class CameraCtrl(DirectObject):
