@@ -33,7 +33,6 @@ def part1_calculate_T_pose(bvh_file_path):
     """
 
     stack = []
-
     joint_name = []
     joint_parent = []
     joint_offset = []
@@ -56,10 +55,11 @@ def part1_calculate_T_pose(bvh_file_path):
                 bRoot = line[0].upper() == 'ROOT'
                 bEnd = line[0].upper() == 'END'
 
+                # Determine Joint Father Index
                 father_index = -1
                 if len(stack) > 0:
                     father_index = stack[-1]
-
+                # Determine Joint name
                 single_joint_name = line[1]
                 single_joint_name = 'RootJoint' if bRoot else single_joint_name
                 single_joint_name = (joint_name[father_index] + '_end') if bEnd else single_joint_name
@@ -77,6 +77,7 @@ def part1_calculate_T_pose(bvh_file_path):
                     elif line[0] == '{':
                         stack.append(len(joint_name) - 1)
                     elif line[0].upper() == 'OFFSET':
+                        # Process Offset Data
                         offset = line[1:]
                         for j in range(len(offset)):
                             offset[j] = float(offset[j])
@@ -93,7 +94,7 @@ def part1_calculate_T_pose(bvh_file_path):
                 stack.pop()
 
             # Motion Data
-            elif lines[i].startswith('Frame Time'):
+            elif line[0].upper() == 'MOTION':
                 break
             else:
                 continue
