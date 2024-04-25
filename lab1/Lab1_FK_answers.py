@@ -127,7 +127,7 @@ def part2_forward_kinematics(joint_name, joint_parent, joint_offset, motion_data
     single_frame_motion_data = motion_data[frame_id]
 
     joint_positions = np.ndarray((M, 3), dtype=float)
-    joint_orientations = np.ndarray((M, 4), dtype=float)
+    joint_orientations = np.zeros((M, 4), dtype=float)
 
     # Read RootJoint Offset
     joint_positions[0, 0] = single_frame_motion_data[0]
@@ -148,15 +148,25 @@ def part2_forward_kinematics(joint_name, joint_parent, joint_offset, motion_data
         single_joint_name = joint_name[i]
 
         if not single_joint_name.endswith('_end'):
-            xyz = single_frame_motion_data[3 * j : 3 * j + 3]
-            quat = R.from_euler('XYZ', xyz, degrees=False).as_quat()
+            xyz = single_frame_motion_data[3 * j: 3 * j + 3]
+            quat = R.from_euler('XYZ', xyz, degrees=True).as_quat()
             joint_orientations[i] = quat
             j += 1
 
         i += 1
 
-    
-
+    for i in range(1, M):
+        father_index = joint_parent[i]
+        joint_positions[i] = joint_positions[father_index]
+        father_orient = R.from_quat(joint_orientations[father_index])
+        single_joint_offset = np.asarray(joint_offset[i])
+        joint_positions[i] += father_orient.as_matrix() @ single_joint_offset
+        if np.linalg.norm(joint_orientations[i]) < 1e-6:
+            son_orient = R.identity()
+        else:
+            son_orient = R.from_quat(joint_orientations[i])
+        son_orient = son_orient * father_orient
+        joint_orientations[i] = son_orient.as_quat()
 
     return joint_positions, joint_orientations
 
