@@ -98,8 +98,8 @@ def part1_calculate_T_pose(bvh_file_path):
                 break
             else:
                 continue
-    assert(len(joint_name) == len(joint_offset))
-    assert(len(joint_name) == len(joint_parent))
+    assert (len(joint_name) == len(joint_offset))
+    assert (len(joint_name) == len(joint_parent))
     # joint_name = []
     # joint_parent = []
     # joint_offset = []
@@ -120,8 +120,44 @@ def part2_forward_kinematics(joint_name, joint_parent, joint_offset, motion_data
         1. joint_orientations的四元数顺序为(x, y, z, w)
         2. from_euler时注意使用大写的XYZ
     """
-    joint_positions = None
-    joint_orientations = None
+    N = motion_data.shape[0]
+    X = motion_data.shape[1]
+    M = len(joint_name)
+
+    single_frame_motion_data = motion_data[frame_id]
+
+    joint_positions = np.ndarray((M, 3), dtype=float)
+    joint_orientations = np.ndarray((M, 4), dtype=float)
+
+    # Read RootJoint Offset
+    joint_positions[0, 0] = single_frame_motion_data[0]
+    joint_positions[0, 1] = single_frame_motion_data[1]
+    joint_positions[0, 2] = single_frame_motion_data[2]
+
+    # Read Joint Offset
+    for i in range(1, M):
+        joint_positions[i, 0] = joint_offset[i][0]
+        joint_positions[i, 1] = joint_offset[i][1]
+        joint_positions[i, 2] = joint_offset[i][2]
+
+    j = 1
+    i = 0
+
+    # Read Joint Rotation
+    while i < M:
+        single_joint_name = joint_name[i]
+
+        if not single_joint_name.endswith('_end'):
+            xyz = single_frame_motion_data[3 * j : 3 * j + 3]
+            quat = R.from_euler('XYZ', xyz, degrees=False).as_quat()
+            joint_orientations[i] = quat
+            j += 1
+
+        i += 1
+
+    
+
+
     return joint_positions, joint_orientations
 
 
